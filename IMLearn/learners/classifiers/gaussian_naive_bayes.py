@@ -39,7 +39,11 @@ class GaussianNaiveBayes(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+        self.classes_, counts = np.unique(y, return_counts=True)  # Stated in forum we may assume no classes are missing
+        self.mu_ = np.array([X[y == i].mean(axis=0) for i in self.classes_])
+        self.vars_ = np.array([X[y == i].var(axis=0, ddof=1) for i in self.classes_])
+        self.pi_ = counts / y.shape[0]
+
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -55,7 +59,8 @@ class GaussianNaiveBayes(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+        indexesOfMax = self.likelihood(X).argmax(axis=1)
+        return self.classes_[indexesOfMax]
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
@@ -75,7 +80,12 @@ class GaussianNaiveBayes(BaseEstimator):
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
 
-        raise NotImplementedError()
+        likelihoodMatrix = np.zeros((X.shape[0],self.classes_.size))
+        for k, class_name in enumerate(self.classes_):
+            coefficient = 1 / np.sqrt(2 * np.pi * (self.vars_[k]))
+            exp = np.exp((-1 / 2) * (1/self.vars_[k]) * (X-self.mu_[k])**2)
+            likelihoodMatrix[:,k] = np.prod(coefficient * exp,axis=1) * self.pi_[k]
+        return likelihoodMatrix
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -95,4 +105,4 @@ class GaussianNaiveBayes(BaseEstimator):
             Performance under missclassification loss function
         """
         from ...metrics import misclassification_error
-        raise NotImplementedError()
+        return misclassification_error(y,self.predict(X))
