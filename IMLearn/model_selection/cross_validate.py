@@ -4,7 +4,6 @@ from typing import Tuple, Callable
 import numpy as np
 from IMLearn import BaseEstimator
 
-
 def cross_validate(estimator: BaseEstimator, X: np.ndarray, y: np.ndarray,
                    scoring: Callable[[np.ndarray, np.ndarray, ...], float], cv: int = 5) -> Tuple[float, float]:
     """
@@ -37,4 +36,16 @@ def cross_validate(estimator: BaseEstimator, X: np.ndarray, y: np.ndarray,
     validation_score: float
         Average validation score over folds
     """
-    raise NotImplementedError()
+    trainScore = 0
+    validationScore = 0
+    XFolded = np.array_split(X,cv)
+    YFolded = np.array_split(y,cv)
+    for i in range(cv):
+        trainX = np.concatenate(XFolded[:i] + XFolded[i+1:])
+        trainY = np.concatenate(YFolded[:i] + YFolded[i+1:])
+        validateX = XFolded[i]
+        validateY = YFolded[i]
+        estimator.fit(trainX,trainY)
+        trainScore += scoring(trainY, estimator.predict(trainX))
+        validationScore += scoring(validateY, estimator.predict(validateX))
+    return trainScore / cv, validationScore / cv
